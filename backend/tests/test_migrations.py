@@ -67,3 +67,16 @@ def test_alembic_upgrade_and_downgrade(tmp_path: Path) -> None:
     }
     connection.close()
     assert remaining == {"alembic_version"}
+
+
+def test_sqlite_parent_directory_is_created(tmp_path: Path) -> None:
+    """A fresh checkout must be able to open its SQLite file without manual mkdir."""
+    from app.db.session import _ensure_sqlite_directory
+
+    target = tmp_path / "nested" / "deeper" / "divu.db"
+    _ensure_sqlite_directory(f"sqlite+aiosqlite:///{target}")
+    assert target.parent.is_dir()
+
+    # In-memory and non-SQLite URLs are left untouched (and must not raise).
+    _ensure_sqlite_directory("sqlite+aiosqlite:///:memory:")
+    _ensure_sqlite_directory("postgresql+asyncpg://user:pass@localhost:5432/divu")

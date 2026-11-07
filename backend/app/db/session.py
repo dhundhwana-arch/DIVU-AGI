@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
+from pathlib import Path
 from typing import Any
 
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -16,12 +18,31 @@ from app.core.config import Settings, get_settings
 from app.db.base import Base
 
 
+def _ensure_sqlite_directory(url: str) -> None:
+    """Create the parent directory of a SQLite file database if it is missing.
+
+    SQLite will not create directories, so a fresh checkout pointing at
+    ``sqlite+aiosqlite:///./.data/divu.db`` would otherwise fail with
+    "unable to open database file". In-memory databases are left alone.
+    """
+    try:
+        parsed = make_url(url)
+    except Exception:  # pragma: no cover - unparseable URLs fall through to SQLAlchemy
+        return
+    if parsed.get_backend_name() != "sqlite" or not parsed.database:
+        return
+    directory = Path(parsed.database).expanduser().parent
+    if str(directory) not in {"", "."}:
+        directory.mkdir(parents=True, exist_ok=True)
+
+
 def create_engine(
     settings: Settings | None = None, *, database_url: str | None = None
 ) -> AsyncEngine:
     """Build an AsyncEngine tuned for the configured backend."""
     settings = settings or get_settings()
     url = database_url or settings.database_url
+    _ensure_sqlite_directory(url)
 
     kwargs: dict[str, Any] = {"echo": settings.db_echo, "future": True}
     if url.startswith("sqlite"):

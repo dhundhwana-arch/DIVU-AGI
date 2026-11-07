@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.core.config import get_settings
 from app.db.base import Base
+from app.db.session import _ensure_sqlite_directory
 from app.db.models import (  # noqa: F401  (imported for metadata registration)
     ApiKey,
     AuditLog,
@@ -29,7 +30,10 @@ if config.config_file_name is not None:
 
 # Prefer the application's own configuration (env var DIVU_DATABASE_URL) over alembic.ini.
 settings = get_settings()
-config.set_main_option("sqlalchemy.url", settings.database_url.replace("%", "%%"))
+database_url = settings.database_url.replace("%", "%%")
+# SQLite will not create the parent directory; make sure migrations can open the file.
+_ensure_sqlite_directory(settings.database_url)
+config.set_main_option("sqlalchemy.url", database_url)
 
 target_metadata = Base.metadata
 
