@@ -1,16 +1,37 @@
+import fs from "node:fs";
+import path from "node:path";
 import Link from "next/link";
 import { InstallButton } from "@/components/InstallButton";
+
+// Read the package metadata per request so the page never advertises a file that is not there.
+export const dynamic = "force-dynamic";
+
+const PACKAGE_PATH = path.join(process.cwd(), "public", "downloads", "divu-ai-app.zip");
+const PACKAGE_URL = "/downloads/divu-ai-app.zip";
+
+function readPackage() {
+  try {
+    const stat = fs.statSync(PACKAGE_PATH);
+    return {
+      available: stat.size > 0,
+      sizeMb: stat.size / (1024 * 1024),
+      updated: stat.mtime.toISOString().slice(0, 10),
+    };
+  } catch {
+    return { available: false, sizeMb: 0, updated: null as string | null };
+  }
+}
 
 const STEPS = [
   {
     title: "1 · Install from this page (instant)",
     body: "Open the site on your phone or desktop browser and use the Install button. DIVU AI is added to your home screen and opens in a standalone window with no browser chrome.",
-    action: "install",
+    action: "install" as const,
   },
   {
     title: "2 · Download the package (keep it forever)",
     body: "A zip containing the complete application: Next.js frontend, FastAPI backend, database migrations, tests, operator CLI and a one-command start script. Runs on macOS, Linux and Windows with Python 3.11 and Node 22.",
-    action: "download",
+    action: "download" as const,
   },
   {
     title: "3 · Run your own instance",
@@ -35,6 +56,8 @@ const NOTES = [
 ];
 
 export default function DownloadPage() {
+  const pkg = readPackage();
+
   return (
     <div className="space-y-12">
       <section className="panel p-8 md:p-10">
@@ -49,13 +72,25 @@ export default function DownloadPage() {
         </p>
         <div className="mt-6 flex flex-wrap items-center gap-4">
           <InstallButton className="btn-primary" />
-          <a className="btn-ghost" href="/downloads/divu-ai-app.zip" download>
-            Download DIVU-AI-app.zip
-          </a>
+          {pkg.available ? (
+            <a className="btn-ghost" href={PACKAGE_URL} download>
+              Download DIVU-AI-app.zip
+            </a>
+          ) : (
+            <span className="badge-off" title="Build it with: make package">
+              Package not built yet
+            </span>
+          )}
           <Link href="/app" className="text-sm text-slate-400 hover:text-white hover:underline">
             Skip and open the workspace
           </Link>
         </div>
+
+        <p className="mt-4 text-xs text-slate-500">
+          {pkg.available
+            ? `Package built ${pkg.updated} · ${pkg.sizeMb.toFixed(2)} MB. Regenerate any time with: make package`
+            : "The downloadable package is a build artifact and is not committed. From the repository root run: make package"}
+        </p>
       </section>
 
       <section className="grid gap-4 md:grid-cols-3">
@@ -68,11 +103,16 @@ export default function DownloadPage() {
                 <InstallButton className="btn-ghost" />
               </div>
             )}
-            {step.action === "download" && (
-              <a className="btn-ghost mt-4" href="/downloads/divu-ai-app.zip" download>
-                Download zip
-              </a>
-            )}
+            {step.action === "download" &&
+              (pkg.available ? (
+                <a className="btn-ghost mt-4" href={PACKAGE_URL} download>
+                  Download zip
+                </a>
+              ) : (
+                <pre className="mt-4 rounded-xl border border-white/10 bg-ink-800/60 px-3 py-2 font-mono text-xs text-slate-300">
+                  make package
+                </pre>
+              ))}
           </article>
         ))}
       </section>
