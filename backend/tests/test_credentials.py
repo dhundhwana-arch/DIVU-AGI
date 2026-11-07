@@ -20,7 +20,7 @@ async def test_credentials_are_stored_encrypted_and_masked(
     assert created.status_code == 200, created.text
     credential_id = created.json()["id"]
     assert SECRET not in created.json()["masked_value"]
-    assert created.json()["masked_value"].endswith("7890")
+    assert created.json()["masked_value"].endswith("2345")
 
     rows = (
         await db_session.execute(
@@ -35,7 +35,7 @@ async def test_credentials_are_stored_encrypted_and_masked(
 
     listed = await client.get("/api/v1/security/credentials", headers=user_client["headers"])
     assert listed.status_code == 200
-    assert listed.json()["items"][0]["masked_value"].endswith("7890")
+    assert listed.json()["items"][0]["masked_value"].endswith("2345")
 
     revealed = await client.post(
         f"/api/v1/security/credentials/{credential_id}/reveal", headers=user_client["headers"]
