@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  @apply bg-ink-950 text-slate-200 antialiased;
+}
+
+body {
+  background-image:
+    radial-gradient(60rem 40rem at 12% -10%, rgba(47, 155, 255, 0.14), transparent 60%),
+    radial-gradient(50rem 40rem at 92% 0%, rgba(139, 92, 246, 0.12), transparent 60%);
+  background-attachment: fixed;
+}
+
+@layer components {
+  .panel {
+    @apply rounded-2xl border border-white/10 bg-ink-900/70 shadow-panel backdrop-blur;
+  }
+
+  .panel-header {
+    @apply flex items-center justify-between border-b border-white/5 px-5 py-4;
+  }
+
+  .panel-title {
+    @apply text-sm font-semibold uppercase tracking-[0.14em] text-slate-400;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium
+      transition disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply btn bg-brand-gradient text-white hover:brightness-110;
+  }
+
+  .btn-ghost {
+    @apply btn border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10;
+  }
+
+  .field {
+    @apply w-full rounded-xl border border-white/10 bg-ink-800/80 px-3 py-2 text-sm text-slate-100
+      outline-none placeholder:text-slate-500 focus:border-brand-500 focus:ring-1 focus:ring-brand-500;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium;
+  }
+
+  .badge-ok {
+    @apply badge border-emerald-400/30 bg-emerald-400/10 text-emerald-300;
+  }
+
+  .badge-warn {
+    @apply badge border-amber-400/30 bg-amber-400/10 text-amber-300;
+  }
+
+  .badge-off {
+    @apply badge border-white/10 bg-white/5 text-slate-400;
+  }
+
+  .kv {
+    @apply flex items-center justify-between gap-4 py-1.5 text-sm;
+  }
+
+  .kv-key {
+    @apply text-slate-400;
+  }
+
+  .kv-value {
+    @apply font-medium text-slate-100;
+  }
+}

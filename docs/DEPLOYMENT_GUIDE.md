@@ -1,0 +1,154 @@
+# DIVU AI — Deployment Guide
+
+DIVU AI runs identically on five targets. The only differences are where secrets come from and
+which data services are attached.
+
+| Target | When to use | Status |
+|---|---|---|
+| Local (no services) | Development, CI, contributors | ✅ today |
+| Docker Compose | Demos, small teams, single-node pilots | ✅ Compose file ships in Phase 1; full stack usable from Phase 3 |
+| Single VM + reverse proxy | Cost-sensitive production | ○ documented, Phase 10 hardening |
+| Managed container platforms | Teams without Kubernetes | ○ Phase 10 |
+| Kubernetes | Scale, multi-tenant | ○ Phase 10 |
+
+## 1. Local development (zero external services)
+
+```bash
+make setup            # .venv + pip install + npm install
+cp .env.example .env  # optional
+make dev-backend      # http://localhost:8000
+make dev-frontend     # http://localhost:3000
+make seed             # demo@divu.ai / Demo!Passphrase1
+```
+
+Defaults: SQLite at `backend/.data/divu.db`, in-memory cache, local object storage, `mock`
+provider. The schema is created automatically in development/test; **staging and production always
+use Alembic**.
+
+## 2. Docker Compose (Postgres + pgvector, Redis, MinIO)
+
+```bash
+cp .env.example .env
+# edit: DIVU_SECRET_KEY, DIVU_ENCRYPTION_KEY, DIVU_APP_ENV=development, DIVU_ALLOW_PUBLIC_REGISTRATION=true
+docker compose up --build
+```
+
+* Web: <http://localhost:3000> · API docs: <http://localhost:8000/docs> · MinIO console: <http://localhost:9001>
+* The API container runs `manage.py db-upgrade` then `manage.py seed` before starting Uvicorn.
+* Data lives in named volumes (`postgres-data`, `minio-data`); `docker compose down -v` destroys it.
+* Switch to production-grade services by changing `DIVU_DATABASE_URL`, `DIVU_REDIS_URL` and the
+  `DIVU_S3_*` variables — no code change is required.
+
+## 3. Production configuration
+
+Required in `DIVU_APP_ENV=production` (the app refuses to start otherwise):
+
+| Variable | Requirement |
+|---|---|
+| `DIVU_SECRET_KEY` | ≥ 32 random characters; rotate to invalidate all sessions |
+| `DIVU_ENCRYPTION_KEY` | Fernet key; **rotating requires re-encrypting stored credentials** |
+| `DIVU_DATABASE_URL` | `postgresql+asyncpg://…` |
+| `DIVU_ALLOW_PUBLIC_REGISTRATION` | `false` |
+| `DIVU_DEBUG` | `false` |
+| `DIVU_DOCS_URL` | empty (disables `/docs`) |
+| `DIVU_CORS_ORIGINS` | your origins only |
+
+Recommended: `DIVU_CACHE_BACKEND=redis`, `DIVU_OBJECT_STORAGE_BACKEND=s3`, `DIVU_LOG_FORMAT=json`,
+`DIVU_LOG_LEVEL=INFO`, forward `X-Forwarded-For` from the proxy.
+
+Validate before every deploy:
+
+```bash
+make check-config     # prints a redacted summary and exits non-zero on problems
+```
+
+## 4. Single VM (systemd + Nginx/Caddy)
+
+1. Provision PostgreSQL 16 with `pgvector`, Redis 7 and an S3-compatible bucket.
+2. Deploy the code to `/opt/divu-ai`, create `/opt/divu-ai/.venv`, install `requirements.txt`.
+3. Store secrets in the platform secret manager or a root-owned `/etc/divu-ai.env` (`chmod 600`).
+4. Run migrations as a separate step, then the API:
+
+```ini
+# /etc/systemd/system/divu-api.service
+[Unit]
+Description=DIVU AI API
+After=network.target postgresql.service
+
+[Service]
+User=divu
+WorkingDirectory=/opt/divu-ai/backend
+EnvironmentFile=/etc/divu-ai.env
+ExecStart=/opt/divu-ai/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 4
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+```
+
+5. Terminate TLS at Nginx/Caddy and proxy `/` to the Next.js server (`npm run start`) and
+   `/api` to the API. Send `X-Forwarded-For` and `X-Request-ID`.
+6. Enable nightly `pg_dump` and log rotation (see §7).
+
+## 5. Managed container platforms (Render / Fly.io / Railway / Cloud Run / Azure Container Apps)
+
+Two images (`backend/Dockerfile`, `frontend/Dockerfile`), environment variables from the platform
+secret store, managed Postgres/Redis/S3 attached by URL. Run migrations as a release step:
+
+```bash
+alembic upgrade head
+```
+
+Scale the API horizontally behind the platform load balancer; set `DIVU_CACHE_BACKEND=redis` so
+rate limits and caches are shared. Workers are stateless — **no sticky sessions are required**.
+
+## 6. Kubernetes (outline, Phase 10)
+
+* Deployments: `api` (2+ replicas, HPA on CPU and request rate from `/metrics`), `web` (2+).
+* Pre-start Job/InitContainer: `alembic upgrade head`.
+* Secrets from External Secrets / CSI driver — never from a committed manifest.
+* `PodDisruptionBudget`, `readinessProbe: /health/ready`, `livenessProbe: /health/live`.
+* Stateful services (Postgres, Redis) via operators; object storage via S3.
+* `NetworkPolicy`: API may egress to Postgres, Redis, S3 and provider APIs only.
+
+## 7. Observability, backups and recovery
+
+**Health**
+* `/health/live` — process liveness (never touches dependencies).
+* `/health/ready` — probes database, object storage and cache; returns 503 when degraded.
+* `/metrics` — Prometheus exposition (request rate, latency, errors; dependency metrics from
+  Phase 3).
+
+**Logs**
+* Structured JSON to stdout; redaction is enforced in-process. Do not log prompt bodies
+  (`DIVU_LOG_PROMPT_CONTENT` stays `false` except in a controlled debug session).
+
+**Backups**
+* PostgreSQL: nightly `pg_dump -Fc`, WAL archiving for point-in-time recovery.
+* Object storage: bucket versioning + lifecycle policy.
+* Config: keep `.env` in the secret manager, not in the repository.
+
+**Recovery drill (quarterly)**
+1. Provision an empty database, restore the latest dump, run `alembic upgrade head`.
+2. Start the API against it and check `/health/ready`.
+3. Sign in as an administrator and confirm the audit log is intact.
+4. Record RTO/RPO in the operations log.
+
+## 8. Scaling notes
+
+| Component | Guideline |
+|---|---|
+| API (API-hosted models) | 4 workers/replica, I/O bound; scale on request rate |
+| API (local models) | Size by VRAM; pin replicas to GPU nodes |
+| Postgres | Connection pooling (PgBouncer) above ~100 API connections |
+| pgvector | HNSW index; ~2 GB RAM per 1M 1536-dim vectors |
+| Redis | Single node is enough for cache + rate limits; use a managed HA pair in production |
+| Frontend | Static export/CDN for the shell; Node server for the API proxy |
+
+## 9. Rollback
+
+1. Redeploy the previous image tag.
+2. If the release included a migration, run `alembic downgrade <previous revision>` — every
+   revision implements `downgrade()` and the round-trip is covered by an automated test.
+3. Confirm `/health/ready` and the audit log, then announce recovery.

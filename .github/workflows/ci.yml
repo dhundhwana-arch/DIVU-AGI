@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  backend:
+    name: Backend (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12"]
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Lint
+        run: |
+          ruff check app tests
+          ruff format --check app tests
+
+      - name: Tests
+        env:
+          DIVU_APP_ENV: test
+          DIVU_SECRET_KEY: ci-secret-key-with-sufficient-length-000001
+          DIVU_DATABASE_URL: sqlite+aiosqlite:///./.data/ci.db
+          DIVU_LOG_LEVEL: WARNING
+        run: pytest --cov=app --cov-report=term-missing
+
+      - name: Migration round-trip
+        env:
+          DIVU_APP_ENV: test
+          DIVU_SECRET_KEY: ci-secret-key-with-sufficient-length-000001
+          DIVU_DATABASE_URL: sqlite+aiosqlite:///./.data/migration.db
+        run: |
+          alembic upgrade head
+          alembic downgrade base
+
+      - name: Secret scan (fail if a key is committed)
+        run: |
+          if grep -rInE "(sk-[A-Za-z0-9]{20,}|DIVU_SECRET_KEY=[A-Za-z0-9/_+=-]{32,})" app tests .. --include="*.py" --include="*.ts" --include="*.tsx" ; then
+            echo "::error::A credential-looking value appears to be committed."
+            exit 1
+          fi
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npx next lint
+
+      - name: Build
+        run: npm run build

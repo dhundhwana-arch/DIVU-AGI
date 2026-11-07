@@ -1,0 +1,97 @@
+# DIVU AI — local full stack
+#
+#   docker compose up --build
+#
+# Web: http://localhost:3000   API: http://localhost:8000/docs   MinIO: http://localhost:9001
+# The API container applies Alembic migrations on start.
+
+name: divu-ai
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: divu-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-divu}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-divu}
+      POSTGRES_DB: ${POSTGRES_DB:-divu}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-divu}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: divu-redis
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "no"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: divu-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-divu}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-divu-secret}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: divu-backend
+    env_file: .env
+    environment:
+      DIVU_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-divu}:${POSTGRES_PASSWORD:-divu}@postgres:5432/${POSTGRES_DB:-divu}
+      DIVU_REDIS_URL: redis://redis:6379/0
+      DIVU_CACHE_BACKEND: redis
+      DIVU_OBJECT_STORAGE_BACKEND: s3
+      DIVU_S3_BUCKET: ${S3_BUCKET:-divu-objects}
+      DIVU_S3_ENDPOINT_URL: http://minio:9000
+      DIVU_CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "python manage.py db-upgrade &&
+             python manage.py seed &&
+             python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: divu-frontend
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: /api
+      API_PROXY_TARGET: http://backend:8000
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  postgres-data:
+  minio-data:
