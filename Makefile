@@ -8,7 +8,7 @@ FRONTEND_PORT ?= 3000
 PREVIEW_HOST ?= 0.0.0.0
 
 .PHONY: help setup dev dev-backend dev-frontend test coverage lint format \
-        migrate revision seed create-admin check-config docker-up docker-down clean
+        migrate revision seed create-admin check-config docker-up docker-down icons package clean
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -24,8 +24,11 @@ setup: ## Create virtualenvs and install backend + frontend dependencies
 dev-backend: ## Run the FastAPI API with auto-reload
 	cd backend && $(CURDIR)/$(VENV)/bin/python manage.py run --host $(PREVIEW_HOST) --port $(BACKEND_PORT) --reload
 
-dev-frontend: ## Run the Next.js web app
+dev-frontend: ## Run the Next.js web app (development)
 	cd frontend && npm run dev -- --hostname $(PREVIEW_HOST) --port $(FRONTEND_PORT)
+
+prod-frontend: ## Build and serve the Next.js app (PWA install requires a production build)
+	cd frontend && npm run build && API_PROXY_TARGET=http://127.0.0.1:$(BACKEND_PORT) npx next start --hostname $(PREVIEW_HOST) --port $(FRONTEND_PORT)
 
 dev: ## Run both (use two terminals / processes)
 	@echo "Start 'make dev-backend' and 'make dev-frontend' in separate shells."
@@ -65,6 +68,12 @@ docker-up: ## Start Postgres+pgvector, Redis, MinIO, API and web
 
 docker-down: ## Stop the compose stack
 	docker compose down
+
+package: ## Build the downloadable app package (frontend/public/downloads)
+	$(PYTHON) scripts/build_download_package.py
+
+icons: ## Regenerate the PWA icon set
+	$(PYTHON) scripts/generate_icons.py
 
 clean: ## Remove caches and local data
 	rm -rf backend/.data backend/.pytest_cache backend/.ruff_cache

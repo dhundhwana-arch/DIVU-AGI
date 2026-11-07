@@ -1,6 +1,9 @@
 # DIVU AI — API Documentation
 
-Base URL (development): `http://localhost:8000` · Interactive docs: `/docs` · Metrics: `/metrics`
+Base URL (development): `http://localhost:8000` · Web app: `http://localhost:3000`
+(website at `/`, installable workspace at `/app`, install page at `/download`; the web app proxies
+`/api/*` to this backend, so browsers never need CORS).
+Interactive docs: `/docs` · Metrics: `/metrics`
 All versioned routes live under **`/api/v1`**. Health probes are unversioned and unauthenticated.
 
 ## 1. Conventions

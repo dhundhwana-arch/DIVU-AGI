@@ -9,6 +9,7 @@ Legend: ✅ complete · 🟡 partial · ○ not started
 | 0 | Architecture & analysis | ✅ | `SYSTEM_ARCHITECTURE.md`, `PHASE0_ANALYSIS.md` |
 | 1 | Foundation & architecture | ✅ | Config, logging, error envelope, DB + Alembic baseline, authN/RBAC, audit, rate limit, injection screening, health probes, CI |
 | 2 | Frontend & backend | 🟡 | Next.js app + brand + auth + live system status (chat workspace lands in Phase 3) |
+| 2b | Website + installable PWA | ✅ | Marketing site, workspace at `/app`, install page, PWA manifest, service worker, icon set, offline page, downloadable app package |
 | 3 | AI chat & model router | ○ | Provider adapters, capability matrix, SSE streaming, retries/fallback/timeouts, token & cost tracking |
 | 4 | Memory & RAG | ○ | 5 memory types + user controls; ingest → chunk → embed → index → retrieve → rerank → cite |
 | 5 | Agent framework | ○ | Agent CRUD/runner, 8 built-in agents, permissions, execution limits |
@@ -51,8 +52,24 @@ encrypted and redacted.
 - Next.js 15 App Router, TypeScript, Tailwind; brand header (DIVU AI / DIVYESH BAMBHANIYA,
   Founder & Creator), responsive shell (mobile + desktop).
 - Typed API client with token storage, refresh handling, error envelope surfacing.
-- Settings page, admin-lite screens, live backend status panel.
+- Live backend status panel, sign in / register, prompt-injection screening playground.
 - Remaining: chat workspace, file upload, agent/model selectors → Phase 3+.
+
+## Phase 2b — Website and installable app ✅
+
+- **Website** (`/`): hero, live build strip (server-rendered from the API, revalidated every 30s),
+  platform capabilities, ten-phase roadmap, security section, install CTA.
+- **Workspace** (`/app`): the operational dashboard, PWA `start_url`.
+- **Install page** (`/download`): install button, package download, contents and quick start,
+  plus honest notes about Android APK generation and iOS Safari.
+- **PWA**: `manifest.webmanifest` (name, icons incl. maskable, standalone display, shortcuts),
+  service worker (precached shell, cache-first hashed assets, network-only `/api`, offline
+  fallback page), generated icon set (192/256/384/512/maskable/apple-touch/favicon/og-cover).
+- **Offline behaviour**: the installed app always opens; live features reconnect when the network
+  returns. API responses are deliberately never cached.
+- **Downloadable package**: `make package` builds `divu-ai-app.zip` (frontend + backend + docs +
+  `start.sh` / `start.bat` + install README).
+- Scripts: `scripts/generate_icons.py`, `scripts/build_download_package.py`.
 
 ## Phase 3 — AI chat and model router (planned)
 - Provider adapters: OpenAI-compatible, Anthropic, Google, plus a deterministic **mock** provider

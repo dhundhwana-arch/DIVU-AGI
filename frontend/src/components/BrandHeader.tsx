@@ -1,20 +1,16 @@
 import Link from "next/link";
+import { BrandMark } from "@/components/BrandMark";
 
-export function BrandMark({ size = 36 }: { size?: number }) {
-  return (
-    <span
-      className="inline-flex items-center justify-center rounded-xl bg-brand-gradient font-bold text-white shadow-glow"
-      style={{ width: size, height: size, fontSize: size * 0.42 }}
-      aria-hidden="true"
-    >
-      D
-    </span>
-  );
-}
+const LINKS = [
+  { href: "/#platform", label: "Platform" },
+  { href: "/#roadmap", label: "Roadmap" },
+  { href: "/#security", label: "Security" },
+  { href: "/download", label: "Install" },
+];
 
 export function BrandHeader() {
   return (
-    <header className="sticky top-0 z-20 border-b border-white/10 bg-ink-950/80 backdrop-blur">
+    <header className="sticky top-0 z-20 border-b border-white/10 bg-ink-950/85 backdrop-blur">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-3">
           <BrandMark />
@@ -27,28 +23,29 @@ export function BrandHeader() {
         </Link>
 
         <nav className="hidden items-center gap-6 text-sm text-slate-300 md:flex">
-          <span className="cursor-not-allowed text-slate-500" title="Phase 3">
-            Chat
-          </span>
-          <span className="cursor-not-allowed text-slate-500" title="Phase 5">
-            Agents
-          </span>
-          <span className="cursor-not-allowed text-slate-500" title="Phase 4">
-            Knowledge
-          </span>
-          <span className="cursor-not-allowed text-slate-500" title="Phase 7">
-            Studio
-          </span>
-          <span className="cursor-not-allowed text-slate-500" title="Phase 10">
-            Admin
-          </span>
+          {LINKS.map((link) => (
+            <Link key={link.href} href={link.href} className="transition hover:text-white">
+              {link.label}
+            </Link>
+          ))}
+          <Link
+            href="/app"
+            className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 transition hover:bg-white/10"
+          >
+            Open workspace
+          </Link>
         </nav>
 
-        <div className="text-right leading-tight">
-          <span className="block text-xs font-semibold tracking-wide text-slate-200">
-            DIVYESH BAMBHANIYA
-          </span>
-          <span className="block text-[11px] text-slate-500">Founder &amp; Creator</span>
+        <div className="flex items-center gap-3">
+          <Link href="/app" className="btn-primary hidden px-3 py-1.5 text-xs sm:inline-flex">
+            Launch app
+          </Link>
+          <div className="hidden text-right leading-tight lg:block">
+            <span className="block text-xs font-semibold tracking-wide text-slate-200">
+              DIVYESH BAMBHANIYA
+            </span>
+            <span className="block text-[11px] text-slate-500">Founder &amp; Creator</span>
+          </div>
         </div>
       </div>
     </header>

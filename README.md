@@ -46,6 +46,38 @@ Full plan: [docs/DEVELOPMENT_ROADMAP.md](docs/DEVELOPMENT_ROADMAP.md) ·
 Architecture: [docs/SYSTEM_ARCHITECTURE.md](docs/SYSTEM_ARCHITECTURE.md) ·
 Phase 1 report: [docs/phases/PHASE_1_FOUNDATION.md](docs/phases/PHASE_1_FOUNDATION.md)
 
+## Website and installable app
+
+The Next.js app serves both the **public website** and the **installable workspace**:
+
+| Route | What it is |
+|---|---|
+| `/` | Marketing site: platform overview, live build status, roadmap, security, install CTA |
+| `/app` | The DIVU AI workspace: live platform status, sign in / register, security toolkit |
+| `/download` | Install to home screen, or download the complete application package |
+
+DIVU AI is a **progressive web app**: open the site on a phone or desktop and choose
+*Install app* (iOS: Share → Add to Home Screen). It then runs in its own window with an
+offline-capable app shell and reconnects to the backend automatically.
+
+Prefer a file you can keep?
+
+```bash
+make package     # builds frontend/public/downloads/divu-ai-app.zip
+make icons       # regenerates the PWA icon set
+```
+
+The package contains the whole platform plus `start.sh` / `start.bat` launchers:
+
+```bash
+unzip divu-ai-app.zip && cd divu-ai && ./start.sh
+# web → http://localhost:3000 · api → http://localhost:8000/docs
+```
+
+> A production build is required for installability — `npm run build && npx next start`
+> (`make prod-frontend`). The service worker is intentionally not registered in `next dev`,
+> where it would serve stale hot-reload chunks.
+
 ## Quickstart (no external services required)
 
 ```bash

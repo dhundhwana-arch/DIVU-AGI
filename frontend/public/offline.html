@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Offline · DIVU AI</title>
+    <meta name="theme-color" content="#05060a" />
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background:
+          radial-gradient(60rem 40rem at 12% -10%, rgba(47, 155, 255, 0.16), transparent 60%),
+          radial-gradient(50rem 40rem at 92% 0%, rgba(139, 92, 246, 0.14), transparent 60%),
+          #05060a;
+        color: #e2e8f0;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      .card {
+        max-width: 30rem;
+        margin: 2rem;
+        padding: 2rem;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 1.25rem;
+        background: rgba(10, 12, 20, 0.8);
+        text-align: center;
+      }
+      .mark {
+        width: 56px; height: 56px; border-radius: 14px; margin: 0 auto 1.25rem;
+        display: grid; place-items: center; font-weight: 700; font-size: 24px; color: #fff;
+        background: linear-gradient(135deg, #2f9bff 0%, #8b5cf6 100%);
+      }
+      h1 { margin: 0 0 0.5rem; font-size: 1.35rem; }
+      p { margin: 0 0 1rem; color: #94a3b8; font-size: 0.95rem; line-height: 1.6; }
+      button {
+        border: 0; border-radius: 0.75rem; padding: 0.65rem 1.25rem; cursor: pointer;
+        background: linear-gradient(135deg, #2f9bff 0%, #8b5cf6 100%);
+        color: #fff; font-size: 0.9rem; font-weight: 600;
+      }
+      small { display: block; margin-top: 1.5rem; color: #64748b; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="mark">D</div>
+      <h1>You are offline</h1>
+      <p>
+        The DIVU AI workspace needs a connection to reach the backend for live status, sign-in and
+        screening. Reconnect and reload to continue.
+      </p>
+      <button onclick="location.reload()">Try again</button>
+      <small>DIVU AI · Created by DIVYESH BAMBHANIYA — Founder &amp; Creator</small>
+    </div>
+  </body>
+</html>

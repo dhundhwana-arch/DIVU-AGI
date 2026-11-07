@@ -68,3 +68,6 @@ pnpm-debug.log*
 next-env.d.ts
 .DS_Store
 *.tsbuildinfo
+
+# Generated download package (rebuild with: make package)
+frontend/public/downloads/
