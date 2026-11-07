@@ -33,3 +33,41 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+# ---------------------------------------------------------------------------
+# DIVU AI — Python (backend)
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+backend/.data/
+*.db
+*.sqlite3
+
+# ---------------------------------------------------------------------------
+# DIVU AI — Node (frontend)
+# ---------------------------------------------------------------------------
+node_modules/
+.next/
+out/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+next-env.d.ts
+.DS_Store
+*.tsbuildinfo
+
+# Generated download package (rebuild with: make package)
+frontend/public/downloads/
